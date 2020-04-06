@@ -1,6 +1,6 @@
 #!/bin/python
 #
-# Copyright (C) 2012 Gedare Bloom
+# Copyright (C) 2012, 2020 Gedare Bloom
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -23,19 +23,21 @@
 # $Id$
 #
 
+import certifi
 from datetime import date, timedelta
 import email
 import getopt
 import getpass
 import os
 import re
+import ssl
 import sys
 
 ## get imapclient at http://imapclient.freshfoo.com/
 from imapclient import IMAPClient 
 
 def usage():
-  print "\
+  print("\
 fetch-flagged-email.py retrieves email that has been \\\\Flagged (gmail starred).\n\
 Specify a folder (gmail label) and it will retrieve all flagged emails\n\
 in that folder using imap and your account/password. The imap support\n\
@@ -56,10 +58,12 @@ Usage: fetch-flagged-email.py -[hi:f:u:p:d:o:r]\n\
   -p --password       account password                      []\n\
   -d --days           days back to look (0 for all)         [0]\n\
   -o --output         output directory for messages         [.]\n\
-  -r --resetflag      reset \\\\Flagged (starred) attribute   [False]\n"
+  -r --resetflag      reset \\\\Flagged (starred) attribute   [False]\n")
 
 def connect(server_address):
-  return IMAPClient(server_address, use_uid=True, ssl=True)
+  ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+  ssl_ctx.check_hostname = True
+  return IMAPClient(server_address, use_uid=True, ssl=True, ssl_context=ssl_ctx)
 
 def searchmail(imap_server, search, output, resetflag):
   messages = imap_server.search(search)
@@ -72,7 +76,7 @@ def searchmail(imap_server, search, output, resetflag):
     f = open(outfile, 'w')
     f.write(message_string)
     f.close()
-    print "{0} -> {1}\n".format(message['subject'], outfile)
+    print("{0} -> {1}\n".format(message['subject'], outfile))
 
   if resetflag:
     imap_server.remove_flags(messages, '\\Flagged')
@@ -84,7 +88,7 @@ def main():
   imap = 'imap.gmail.com'
   
   # restrict searching to a folder (label) name you use
-  folder = 'INBOX'
+  folder = 'RTEMS-Devel'
   
   # username and password can be entered on command line, interactively,
   # or hard-coded here. username is of the form user@domain.com
@@ -112,8 +116,8 @@ def main():
     opts, args = getopt.getopt(sys.argv[1:], "hi:f:u:p:d:o:r",
         ["help", "imap=", "folder", "username=", "password=",
           "days=", "output=", "resetflag="])
-  except getopt.GetoptError, err:
-    print str(err)
+  except getopt.GetoptError as err:
+    print(str(err))
     usage()
     sys.exit(2)
   for opt, arg in opts:
